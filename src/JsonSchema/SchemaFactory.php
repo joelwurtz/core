@@ -179,7 +179,8 @@ final class SchemaFactory implements SchemaFactoryInterface, SchemaFactoryAwareI
         $propertySchemaType = $propertySchema['type'] ?? false;
 
         $isUnknown = Schema::UNKNOWN_TYPE === $propertySchemaType
-            || ('array' === $propertySchemaType && Schema::UNKNOWN_TYPE === ($propertySchema['items']['type'] ?? null));
+            || ('array' === $propertySchemaType && Schema::UNKNOWN_TYPE === ($propertySchema['items']['type'] ?? null))
+        || ('object' === $propertySchemaType && Schema::UNKNOWN_TYPE === ($propertySchema['additionalProperties']['type'] ?? null));
 
         if (
             !$isUnknown && (
@@ -223,9 +224,17 @@ final class SchemaFactory implements SchemaFactoryInterface, SchemaFactoryAwareI
             }
 
             if ($isCollection) {
-                $propertySchema['items']['$ref'] = $subSchema['$ref'];
-                unset($propertySchema['items']['type']);
-                break;
+                $keyTYpe = $type->getCollectionKeyTypes()[0] ?? null;
+
+                if ($keyTYpe && $keyTYpe->getBuiltinType() === Type::BUILTIN_TYPE_STRING) {
+                    $propertySchema['additionalProperties']['$ref'] = $subSchema['$ref'];
+                    unset($propertySchema['additionalProperties']['type']);
+                    break;
+                } else {
+                    $propertySchema['items']['$ref'] = $subSchema['$ref'];
+                    unset($propertySchema['items']['type']);
+                    break;
+                }
             }
 
             $refs[] = ['$ref' => $subSchema['$ref']];
